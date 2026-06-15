@@ -153,7 +153,7 @@ th{padding:7px 9px;font-size:10px}td{padding:7px 9px;font-size:12px}.pill{border
 <body>
 <div class="app">
   <div class="hdr">
-    <h1 id="league-title">&#127926; Bags League 2026</h1>
+    <h1 id="league-title">Bags League 2026</h1>
     <div class="sub" id="league-sub">20 Teams &nbsp;|&nbsp; 11 Weeks &nbsp;|&nbsp; Live Scoring</div>
   </div>
 
@@ -841,7 +841,7 @@ function applyLeagueSettings(settings) {
 function updateLeagueHeader() {
   var title = document.getElementById('league-title');
   var leagueName = (leagueSettings && leagueSettings.leagueName) ? leagueSettings.leagueName : 'Bags League';
-  if (title) title.innerHTML = '&#127926; ' + leagueName;
+  if (title) title.innerHTML = leagueName;
   document.title = leagueName;
   var sub = document.getElementById('league-sub');
   if (sub) {
