@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#1F3864">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#F0F4FA;color:#1a1a1a;padding-bottom:40px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#F0F4FA;color:#1a1a1a;padding-bottom:40px;position:relative;}
 .app{max-width:500px;margin:0 auto;padding:10px}
 /* Header */
 .hdr{background:#1F3864;border-radius:14px;padding:14px 16px;margin-bottom:12px;text-align:center}
@@ -171,10 +171,49 @@ th{padding:7px 9px;font-size:10px}td{padding:7px 9px;font-size:12px}.pill{border
 .championship-box h3{font-size:15px;color:#92400e;margin-bottom:6px}
 .final-winner{background:#dcfce7;color:#166534;border-radius:12px;padding:9px 10px;font-size:13px;font-weight:900;text-align:center;margin-top:8px}
 @media(max-width:420px){.playoff-title-row{grid-template-columns:1fr}.nav{overflow-x:auto}.nvbtn{min-width:70px}}
+/* LOGO SPLASH SCREEN */
 
+.logo-hero{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+
+.hero-logo{
+  width:min(90vw,850px);
+  height:auto;
+}
+
+/* LOGO WATERMARK */
+
+body::before{
+  content:"";
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+
+  background-image:url("assets/bags-logo.png");
+  background-repeat:no-repeat;
+  background-position:center center;
+  background-size:min(70vw,700px);
+
+  opacity:.05;
+
+  pointer-events:none;
+  z-index:-1;
+}
 </style>
 </head>
 <body>
+  <section class="logo-hero">
+  <img src="assets/bags-logo.png"
+       class="hero-logo"
+       alt="Bags League Summer 2026">
+</section>
 <div class="app">
   <div class="hdr">
     <h1 id="league-title">Bags League 2026</h1>
