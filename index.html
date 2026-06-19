@@ -169,6 +169,12 @@ input[type=text]:focus{border-color:#7B2D8B;background:#fff}
 .admin-login .auth-message{font-size:11px;color:#843C0C;min-height:15px;text-align:center}
 .admin-session{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:8px 10px;border-radius:10px;background:#E8F4F0;color:#276221;font-size:11px;font-weight:700}
 .admin-session button{border:0;border-radius:8px;padding:7px 9px;background:#1F3864;color:#fff;font-weight:700;cursor:pointer}
+.score-lock-control{display:none;margin-bottom:10px;padding:10px;border-radius:12px;background:#E8F0FE;border:1.5px solid #B5D4F4;text-align:center}
+.score-lock-control.show{display:block}
+.score-lock-control button{width:100%;border:0;border-radius:10px;padding:11px 12px;background:#1F3864;color:#fff;font-size:14px;font-weight:800;cursor:pointer}
+.score-lock-control.unlocked{background:#FFF2CC;border-color:#FFD966}
+.score-lock-control.unlocked button{background:#B45309}
+.score-lock-note{font-size:10px;color:#666;margin-top:6px}
 
 
 /* ── Modern compact refresh ─────────────────────────────────────────────── */
@@ -276,6 +282,10 @@ body::before{
   <div class="save-bar" id="save-bar">&#10003; &nbsp;All data saved</div>
   <div class="cloud-status off" id="cloud-status">Cloud sync not configured yet</div>
   <div class="mode-status" id="mode-status">Public view-only mode</div>
+  <div class="score-lock-control" id="score-lock-control">
+    <button id="score-lock-btn" type="button">🔒 Scores Locked — Tap to Unlock</button>
+    <div class="score-lock-note" id="score-lock-note">Unlock only while entering scores. It automatically locks again after 2 minutes.</div>
+  </div>
   <select id="season-view-sel" style="display:none;margin-bottom:10px"></select>
   <div class="admin-login" id="admin-login">
     <h3>Administrator Sign In</h3>
@@ -533,9 +543,28 @@ var curWeek = null, curSlot = 0, seasonFilter = null, baggerCnt = 1, baggerWeek 
 var ADMIN_REQUESTED = (new URLSearchParams(window.location.search).has('admin') || window.location.hash === '#admin');
 var ADMIN_MODE = false;
 var PUBLIC_VIEW_ONLY = !ADMIN_MODE;
+var SCORE_EDIT_UNLOCKED = false;
+var scoreLockTimer = null;
 window.ADMIN_MODE = ADMIN_MODE;
 window.PUBLIC_VIEW_ONLY = PUBLIC_VIEW_ONLY;
+window.SCORE_EDIT_UNLOCKED = SCORE_EDIT_UNLOCKED;
 document.body.classList.toggle('view-only', PUBLIC_VIEW_ONLY);
+function setScoreEditUnlocked(enabled) {
+  SCORE_EDIT_UNLOCKED = !!enabled && ADMIN_MODE;
+  window.SCORE_EDIT_UNLOCKED = SCORE_EDIT_UNLOCKED;
+  clearTimeout(scoreLockTimer);
+  if (SCORE_EDIT_UNLOCKED) {
+    scoreLockTimer = setTimeout(function() { setScoreEditUnlocked(false); }, 120000);
+  }
+  var control = document.getElementById('score-lock-control');
+  var button = document.getElementById('score-lock-btn');
+  if (control) control.classList.toggle('unlocked', SCORE_EDIT_UNLOCKED);
+  if (button) button.textContent = SCORE_EDIT_UNLOCKED ? '🔓 Score Editing ON — Tap to Lock' : '🔒 Scores Locked — Tap to Unlock';
+  try { renderMatchups(); } catch(e) {}
+}
+function refreshScoreLockTimer() {
+  if (SCORE_EDIT_UNLOCKED) setScoreEditUnlocked(true);
+}
 window.setAdminMode = function(enabled, email){
   ADMIN_MODE = !!enabled;
   PUBLIC_VIEW_ONLY = !ADMIN_MODE;
@@ -549,8 +578,11 @@ window.setAdminMode = function(enabled, email){
   }
   var login = document.getElementById('admin-login');
   var panel = document.getElementById('admin-panel');
+  var scoreLockControl = document.getElementById('score-lock-control');
   if (login) login.classList.toggle('show', ADMIN_REQUESTED && !ADMIN_MODE);
   if (panel) panel.classList.toggle('show', ADMIN_MODE);
+  if (scoreLockControl) scoreLockControl.classList.toggle('show', ADMIN_MODE);
+  setScoreEditUnlocked(false);
   var sessionEmail = document.getElementById('admin-session-email');
   if (sessionEmail) sessionEmail.textContent = email ? 'Signed in as ' + email : 'Signed in securely';
   try { renderMatchups(); } catch(e) {}
@@ -558,6 +590,16 @@ window.setAdminMode = function(enabled, email){
   try { renderPlayoffs(); } catch(e) {}
 };
 window.setAdminMode(false, '');
+var scoreLockButton = document.getElementById('score-lock-btn');
+if (scoreLockButton) scoreLockButton.addEventListener('click', function() {
+  if (!ADMIN_MODE) return;
+  if (!SCORE_EDIT_UNLOCKED) {
+    if (!confirm('Unlock score editing for 2 minutes? Score buttons will become active.')) return;
+    setScoreEditUnlocked(true);
+  } else {
+    setScoreEditUnlocked(false);
+  }
+});
 
 function getMatch(w, s, mi) {
   if (!results[w]) results[w] = {};
@@ -568,6 +610,7 @@ function getMatch(w, s, mi) {
 
 function recordGame(w, s, mi, game, winner) {
   if (!ADMIN_MODE) { return; }
+  if (!SCORE_EDIT_UNLOCKED) { return; }
   if (playoffState && playoffState.locked) { alert('Regular season is locked. Unlock by starting a new season or restoring a backup.'); return; }
   var m = getMatch(w, s, mi);
   // Toggle off if same value clicked again
@@ -583,6 +626,7 @@ function recordGame(w, s, mi, game, winner) {
     }
   }
   save();
+  refreshScoreLockTimer();
   renderMatchups();
   renderWeekStandings();
   renderSeasonStandings();
@@ -620,7 +664,7 @@ function renderMatchups() {
     var done = (aW + bW === 3);
     var mw = done ? (aW > bW ? 'a' : 'b') : null;
     var hcls = m.swept ? 'swept' : done ? 'done' : '';
-    var stlbl = m.swept ? '&#127942; Sweep!' : done ? '&#10003; Complete' : 'Tap to record';
+    var stlbl = m.swept ? '&#127942; Sweep!' : done ? '&#10003; Complete' : PUBLIC_VIEW_ONLY ? 'View only' : !SCORE_EDIT_UNLOCKED ? 'Scores locked' : 'Tap to record';
 
     var aCls = 'team-side' + (mw === 'a' ? ' winner' : mw === 'b' ? ' loser' : '');
     var bCls = 'team-side' + (mw === 'b' ? ' winner' : mw === 'a' ? ' loser' : '');
@@ -659,8 +703,8 @@ function renderMatchups() {
 function makeGB(mi, game, winner, teamA, teamB, locked, isAuto) {
   var lbl = isAuto ? 'Game 3 (Auto)' : game === 'g1' ? 'Game 1' : game === 'g2' ? 'Game 2' : 'Game 3';
   var cls = 'gbg' + (isAuto ? ' auto-g' : '');
-  var disA = (locked || isAuto || PUBLIC_VIEW_ONLY) ? ' disabled' : '';
-  var disB = (locked || isAuto || PUBLIC_VIEW_ONLY) ? ' disabled' : '';
+  var disA = (locked || isAuto || PUBLIC_VIEW_ONLY || !SCORE_EDIT_UNLOCKED) ? ' disabled' : '';
+  var disB = (locked || isAuto || PUBLIC_VIEW_ONLY || !SCORE_EDIT_UNLOCKED) ? ' disabled' : '';
   var clsA = 'wbtn' + (winner === 'a' ? ' sel-a' : '');
   var clsB = 'wbtn' + (winner === 'b' ? ' sel-b' : '');
   // Use data attributes — no inline onclick, works in all browsers
