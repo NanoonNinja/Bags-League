@@ -151,7 +151,8 @@ input[type=text]:focus{border-color:#7B2D8B;background:#fff}
 .cloud-status.off{background:#FFF2CC;color:#7F6000;border-color:#FFD966}
 
 .admin-panel{display:none;background:#fff;border:1.5px solid #B5D4F4;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.admin-panel.show{display:block}
+.admin-panel.show{display:none}
+body.admin-tools-page .admin-panel.show{display:block}
 .admin-panel h3{font-size:13px;color:#1F3864;margin-bottom:8px}
 .admin-panel textarea{width:100%;min-height:120px;border:1.5px solid #ddd;border-radius:10px;padding:10px;font-family:monospace;font-size:11px;margin-bottom:8px}
 .import-btn{width:100%;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;background:#7B2D8B;color:#fff;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
@@ -175,6 +176,14 @@ input[type=text]:focus{border-color:#7B2D8B;background:#fff}
 .score-lock-control.unlocked{background:#FFF2CC;border-color:#FFD966}
 .score-lock-control.unlocked button{background:#B45309}
 .score-lock-note{font-size:10px;color:#666;margin-top:6px}
+.admin-page-switch{display:none;gap:6px;margin-bottom:10px;padding:5px;border-radius:13px;background:#DCE7F5;position:sticky;top:6px;z-index:8;box-shadow:0 3px 10px rgba(15,23,42,.10)}
+.admin-page-switch.show{display:flex}
+.admin-page-switch button{flex:1;border:0;border-radius:9px;padding:10px 8px;background:transparent;color:#52657D;font-size:12px;font-weight:800;cursor:pointer}
+.admin-page-switch button.active{background:#1F3864;color:#fff;box-shadow:0 2px 7px rgba(31,56,100,.24)}
+body.admin-tools-page #scoring-page-content,body.admin-tools-page #score-lock-control,body.admin-tools-page #season-view-sel{display:none!important}
+#scoring-page-content{animation:pageSlideIn .18s ease-out}
+body.admin-tools-page .admin-panel.show{animation:pageSlideIn .18s ease-out}
+@keyframes pageSlideIn{from{opacity:.4;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
 
 
 /* ── Modern compact refresh ─────────────────────────────────────────────── */
@@ -282,6 +291,10 @@ body::before{
   <div class="save-bar" id="save-bar">&#10003; &nbsp;All data saved</div>
   <div class="cloud-status off" id="cloud-status">Cloud sync not configured yet</div>
   <div class="mode-status" id="mode-status">Public view-only mode</div>
+  <div class="admin-page-switch" id="admin-page-switch" aria-label="Admin pages">
+    <button type="button" class="active" data-admin-page="scoring">Page 1 · Scoring</button>
+    <button type="button" data-admin-page="tools">Page 2 · Admin Tools</button>
+  </div>
   <div class="score-lock-control" id="score-lock-control">
     <button id="score-lock-btn" type="button">🔒 Scores Locked — Tap to Unlock</button>
     <div class="score-lock-note" id="score-lock-note">Unlock only while entering scores. It automatically locks again after 2 minutes.</div>
@@ -353,6 +366,7 @@ Tim/Rick"></textarea>
     <div class="admin-note">Share the normal link with everyone else. Use <strong>?admin=score</strong> when you need to sign in and edit.</div>
   </div>
 
+  <div id="scoring-page-content">
   <div class="nav">
     <button class="nvbtn active" data-nav="score">Score</button>
     <button class="nvbtn" data-nav="week">Week</button>
@@ -486,6 +500,7 @@ Tim/Rick"></textarea>
       </p>
     </div>
   </div>
+  </div>
 </div>
 
 <script>
@@ -545,6 +560,7 @@ var ADMIN_MODE = false;
 var PUBLIC_VIEW_ONLY = !ADMIN_MODE;
 var SCORE_EDIT_UNLOCKED = false;
 var scoreLockTimer = null;
+var ADMIN_PAGE = 'scoring';
 window.ADMIN_MODE = ADMIN_MODE;
 window.PUBLIC_VIEW_ONLY = PUBLIC_VIEW_ONLY;
 window.SCORE_EDIT_UNLOCKED = SCORE_EDIT_UNLOCKED;
@@ -565,6 +581,18 @@ function setScoreEditUnlocked(enabled) {
 function refreshScoreLockTimer() {
   if (SCORE_EDIT_UNLOCKED) setScoreEditUnlocked(true);
 }
+function setAdminPage(page, shouldScroll) {
+  ADMIN_PAGE = (ADMIN_MODE && page === 'tools') ? 'tools' : 'scoring';
+  document.body.classList.toggle('admin-tools-page', ADMIN_PAGE === 'tools');
+  if (ADMIN_PAGE === 'tools') setScoreEditUnlocked(false);
+  document.querySelectorAll('[data-admin-page]').forEach(function(button) {
+    button.classList.toggle('active', button.getAttribute('data-admin-page') === ADMIN_PAGE);
+  });
+  if (shouldScroll !== false) {
+    var app = document.querySelector('.app');
+    if (app) app.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
 window.setAdminMode = function(enabled, email){
   ADMIN_MODE = !!enabled;
   PUBLIC_VIEW_ONLY = !ADMIN_MODE;
@@ -579,9 +607,12 @@ window.setAdminMode = function(enabled, email){
   var login = document.getElementById('admin-login');
   var panel = document.getElementById('admin-panel');
   var scoreLockControl = document.getElementById('score-lock-control');
+  var pageSwitch = document.getElementById('admin-page-switch');
   if (login) login.classList.toggle('show', ADMIN_REQUESTED && !ADMIN_MODE);
   if (panel) panel.classList.toggle('show', ADMIN_MODE);
   if (scoreLockControl) scoreLockControl.classList.toggle('show', ADMIN_MODE);
+  if (pageSwitch) pageSwitch.classList.toggle('show', ADMIN_MODE);
+  setAdminPage('scoring', false);
   setScoreEditUnlocked(false);
   var sessionEmail = document.getElementById('admin-session-email');
   if (sessionEmail) sessionEmail.textContent = email ? 'Signed in as ' + email : 'Signed in securely';
@@ -590,6 +621,29 @@ window.setAdminMode = function(enabled, email){
   try { renderPlayoffs(); } catch(e) {}
 };
 window.setAdminMode(false, '');
+document.querySelectorAll('[data-admin-page]').forEach(function(button) {
+  button.addEventListener('click', function() { setAdminPage(this.getAttribute('data-admin-page'), true); });
+});
+var adminSwipeStart = null;
+var adminSwipeArea = document.querySelector('.app');
+if (adminSwipeArea) {
+  adminSwipeArea.addEventListener('touchstart', function(event) {
+    if (!ADMIN_MODE || event.touches.length !== 1 || event.target.closest('button,input,textarea,select,a')) {
+      adminSwipeStart = null;
+      return;
+    }
+    adminSwipeStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  }, { passive: true });
+  adminSwipeArea.addEventListener('touchend', function(event) {
+    if (!adminSwipeStart || !event.changedTouches.length) return;
+    var dx = event.changedTouches[0].clientX - adminSwipeStart.x;
+    var dy = event.changedTouches[0].clientY - adminSwipeStart.y;
+    adminSwipeStart = null;
+    if (Math.abs(dx) < 70 || Math.abs(dy) > 60) return;
+    if (dx < 0 && ADMIN_PAGE === 'scoring') setAdminPage('tools', true);
+    else if (dx > 0 && ADMIN_PAGE === 'tools') setAdminPage('scoring', true);
+  }, { passive: true });
+}
 var scoreLockButton = document.getElementById('score-lock-btn');
 if (scoreLockButton) scoreLockButton.addEventListener('click', function() {
   if (!ADMIN_MODE) return;
