@@ -214,6 +214,7 @@ body{background:linear-gradient(180deg,#eaf2fb 0%,#f7f9fc 100%);color:var(--ink)
 .hdr{background:linear-gradient(135deg,#14284b,#285a95);border-radius:18px;padding:16px 14px;margin-bottom:10px;box-shadow:0 8px 22px rgba(31,56,100,.22)}
 .hdr h1{font-size:20px;letter-spacing:.2px}.hdr .sub{font-size:12px;color:#d7e9ff}
 .save-bar{border:none;border-radius:999px;padding:7px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+.nvbtn,.cloud-status,.mode-status,.save-bar,.card-hdr span,.card-hdr .csub,select:not(#team-page-select),.wfbtn,.qsbtn,.share-btn,.add-btn,.import-btn,.admin-action-btn,.mini-btn,.week-start-btn,.week-rainout-btn,.week-undo-rainout-btn,.week-reset-start-btn,.week-makeup-btn,.forfeit-btn,.forfeit-undo-btn,.score-lock-control button,.admin-login button,.admin-session button,.admin-page-switch button,.team-collapse summary,.form-lbl,.bagger-hdr h2,.bagger-hdr p,.share-hdr h2,.share-hdr p,.share-box h3,.team-result,.week-date-status,.holiday-remove-btn,.championship-box h3,.playoff-bracket-hdr,.championship-team-choice,.fixed-podium-title,.podium-place .podium-label{text-transform:uppercase;letter-spacing:.04em}
 .nav{position:sticky;top:0;z-index:5;background:rgba(238,244,251,.92);backdrop-filter:blur(10px);padding:6px 0;margin-bottom:10px}
 .nvbtn{border-radius:999px;padding:10px 4px;font-size:11px;box-shadow:none;border:1px solid var(--line);transition:.15s transform,.15s background}
 .nvbtn:active,.wfbtn:active,.wbtn:active,.share-btn:active,.admin-action-btn:active,.import-btn:active,.add-btn:active{transform:scale(.98)}
@@ -985,7 +986,7 @@ function renderWeekStandings() {
     return;
   }
   if (weekCard) weekCard.classList.remove('standings-waiting');
-  document.getElementById('week-title').textContent = 'Week ' + curWeek + ' Standings' + (getWeekDate(curWeek) ? ' — ' + formatLeagueDate(getWeekDate(curWeek),true) : '');
+  document.getElementById('week-title').textContent = 'Week ' + curWeek + ' Standings' + (getWeekDate(curWeek) ? ' — ' + formatLeagueDate(getWeekDate(curWeek),false) : '');
   document.getElementById('week-sub').textContent = 'Live';
   var tot = calcWeekTotals(curWeek);
   var sorted = TEAMS.slice().sort(function(a, b) { return (tot[b].wins - tot[a].wins) || (tot[a].losses - tot[b].losses) || (tnum(a)-tnum(b)); });
@@ -1453,7 +1454,12 @@ function formatLeagueDate(dateValue,short){
   if (!dateValue) return '';
   var date = new Date(dateValue + 'T12:00:00');
   if (isNaN(date.getTime())) return dateValue;
-  return date.toLocaleDateString(undefined,short ? {month:'short',day:'numeric'} : {weekday:'short',month:'short',day:'numeric'});
+  var day = date.getDate();
+  var suffix = (day % 10 === 1 && day % 100 !== 11) ? 'st' : (day % 10 === 2 && day % 100 !== 12) ? 'nd' : (day % 10 === 3 && day % 100 !== 13) ? 'rd' : 'th';
+  var month = date.toLocaleDateString(undefined,{month:'long'});
+  if (short) return month + ' ' + day + suffix;
+  var weekday = date.toLocaleDateString(undefined,{weekday:'long'});
+  return weekday + ', ' + month + ' ' + day + suffix;
 }
 function localISODate(){
   var now = new Date();
@@ -1643,10 +1649,12 @@ function updateWeekStartControl(){
   var row = document.getElementById('week-start-row'), status = document.getElementById('week-date-status'), button = document.getElementById('week-start-btn'), rainButton = document.getElementById('week-rainout-btn'), undoButton = document.getElementById('week-undo-rainout-btn'), resetButton = document.getElementById('week-reset-start-btn'), makeupControl = document.getElementById('makeup-date-control'), makeupInput = document.getElementById('week-makeup-date');
   if (!row || !status || !button || !rainButton || !undoButton || !resetButton || !makeupControl || !makeupInput) return;
   if (!curWeek) { row.style.display='none'; return; }
-  row.style.display='flex';
   var date = getWeekDate(curWeek);
   var hasRainout = (leagueSettings.rainouts || []).some(function(item){ return Number(item.week) === Number(curWeek); });
-  status.textContent = (isActualWeekDate(curWeek) ? 'Played: ' : 'Scheduled: ') + (date ? formatLeagueDate(date,false) : 'Date TBD');
+  var showPlayedDate = isActualWeekDate(curWeek);
+  row.style.display = (ADMIN_MODE || showPlayedDate) ? 'flex' : 'none';
+  status.style.display = showPlayedDate ? 'inline' : 'none';
+  status.textContent = showPlayedDate ? 'Played On: ' + (date ? formatLeagueDate(date,false) : 'Date TBD') : '';
   button.style.display = ADMIN_MODE && !isActualWeekDate(curWeek) ? 'block' : 'none';
   rainButton.style.display = ADMIN_MODE && !isActualWeekDate(curWeek) ? 'block' : 'none';
   undoButton.style.display = ADMIN_MODE && !isActualWeekDate(curWeek) && hasRainout ? 'block' : 'none';
@@ -1671,17 +1679,17 @@ function rebuildWeekControls() {
   if (bwsel) bwsel.innerHTML = '<option value="">Select week...</option>';
   if (wfilt) wfilt.innerHTML = '<button class="wfbtn active" data-filter="">All</button>';
   for (var w = 1; w <= WEEKS; w++) {
-    var dateLabel = formatLeagueDate(getWeekDate(w),true);
+    var dateLabel = formatLeagueDate(getWeekDate(w),false);
     var hadRainout = (leagueSettings.rainouts || []).some(function(item){ return Number(item.week) === w; });
     (leagueSettings.rainouts || []).filter(function(item){ return Number(item.week) === w; }).forEach(function(item){
-      scoreCalendar.push({date:item.date,order:0,label:'🌧 ' + formatLeagueDate(item.date,true) + ' — Week ' + w + ' RAINED OUT',disabled:true});
+      scoreCalendar.push({date:item.date,order:0,label:'🌧 ' + formatLeagueDate(item.date,false) + ' — Week ' + w + ' RAINED OUT',disabled:true});
     });
     scoreCalendar.push({date:getWeekDate(w),order:1,label:'Week ' + w + (hadRainout ? ' (Makeup)' : '') + (dateLabel ? ' — ' + dateLabel : ''),value:w});
     if (bwsel) { var o2 = document.createElement('option'); o2.value = w; o2.textContent = 'Week ' + w + (dateLabel ? ' — ' + dateLabel : ''); bwsel.appendChild(o2); }
     if (wfilt) { var btn = document.createElement('button'); btn.className = 'wfbtn'; btn.textContent = 'Wk ' + w; btn.setAttribute('data-filter', w); wfilt.appendChild(btn); }
   }
   (leagueSettings.calendarNotes || []).filter(function(item){ return item.status === 'Off'; }).forEach(function(item){
-    scoreCalendar.push({date:item.date,order:0,label:'🎆 ' + formatLeagueDate(item.date,true) + ' — ' + (item.note || 'HOLIDAY / DAY OFF').toUpperCase(),disabled:true});
+    scoreCalendar.push({date:item.date,order:0,label:'🎆 ' + formatLeagueDate(item.date,false) + ' — ' + (item.note || 'HOLIDAY / DAY OFF').toUpperCase(),disabled:true});
   });
   scoreCalendar.sort(function(a,b){ return (a.date || '9999').localeCompare(b.date || '9999') || a.order-b.order; });
   if (wsel) scoreCalendar.forEach(function(item){
