@@ -158,10 +158,14 @@ input[type=text]:focus{border-color:#7B2D8B;background:#fff}
 .team-collapse{background:#fff;border:1px solid #dbe3ef;border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:0 3px 10px rgba(15,23,42,.07)}.team-collapse summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:linear-gradient(135deg,#183153,#2563eb);color:#fff;cursor:pointer;list-style:none;font-size:13px;font-weight:900}.team-collapse summary::-webkit-details-marker{display:none}.team-collapse summary small{font-size:10px;font-weight:700;opacity:.75;margin-left:auto}.team-collapse-arrow{font-size:17px;transition:transform .18s}.team-collapse[open] .team-collapse-arrow{transform:rotate(180deg)}.team-collapse-content{padding:10px}
 
 /* Cloud sync status */
-.cloud-status{background:#fff;border:1.5px solid #B5D4F4;color:#1F3864;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;text-align:center;margin-bottom:10px}
-.cloud-status.ok{background:#C6EFCE;color:#276221;border-color:#C6EFCE}
-.cloud-status.err{background:#FCE4D6;color:#843C0C;border-color:#F4B183}
-.cloud-status.off{background:#FFF2CC;color:#7F6000;border-color:#FFD966}
+.cloud-status{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#0f172a,#334155);border:1.5px solid rgba(255,255,255,.55);color:#fff;border-radius:999px;padding:8px 13px;font-size:12px;font-weight:1000;text-align:center;margin-bottom:10px;box-shadow:0 5px 14px rgba(15,23,42,.16);letter-spacing:.02em}
+.cloud-status:before{content:"";width:9px;height:9px;border-radius:999px;background:#fbbf24;box-shadow:0 0 0 3px rgba(251,191,36,.18)}
+.cloud-status.ok{background:linear-gradient(135deg,#065f46,#16a34a);color:#fff;border-color:#bbf7d0}
+.cloud-status.ok:before{background:#86efac;box-shadow:0 0 0 3px rgba(134,239,172,.24),0 0 12px rgba(134,239,172,.8)}
+.cloud-status.err{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border-color:#fecaca}
+.cloud-status.err:before{background:#fecaca;box-shadow:0 0 0 3px rgba(254,202,202,.24)}
+.cloud-status.off{background:linear-gradient(135deg,#78350f,#f59e0b);color:#fff;border-color:#fde68a}
+.cloud-status.off:before{background:#fde68a;box-shadow:0 0 0 3px rgba(253,230,138,.24)}
 
 .admin-panel{display:none;background:#fff;border:1.5px solid #B5D4F4;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .admin-panel.show{display:none}
@@ -209,7 +213,7 @@ body{background:linear-gradient(180deg,#eaf2fb 0%,#f7f9fc 100%);color:var(--ink)
 .app{max-width:560px;padding:10px 10px 26px}
 .hdr{background:linear-gradient(135deg,#14284b,#285a95);border-radius:18px;padding:16px 14px;margin-bottom:10px;box-shadow:0 8px 22px rgba(31,56,100,.22)}
 .hdr h1{font-size:20px;letter-spacing:.2px}.hdr .sub{font-size:12px;color:#d7e9ff}
-.cloud-status,.mode-status,.save-bar{border:none;border-radius:999px;padding:7px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+.mode-status,.save-bar{border:none;border-radius:999px;padding:7px 12px;margin-bottom:8px;box-shadow:0 1px 4px rgba(15,23,42,.08)}
 .nav{position:sticky;top:0;z-index:5;background:rgba(238,244,251,.92);backdrop-filter:blur(10px);padding:6px 0;margin-bottom:10px}
 .nvbtn{border-radius:999px;padding:10px 4px;font-size:11px;box-shadow:none;border:1px solid var(--line);transition:.15s transform,.15s background}
 .nvbtn:active,.wfbtn:active,.wbtn:active,.share-btn:active,.admin-action-btn:active,.import-btn:active,.add-btn:active{transform:scale(.98)}
@@ -374,7 +378,7 @@ body::before{
 </div>
 
   <div class="save-bar" id="save-bar">&#10003; &nbsp;All data saved</div>
-  <div class="cloud-status off" id="cloud-status">Cloud sync not configured yet</div>
+  <div class="cloud-status off" id="cloud-status">Sync Offline</div>
   <div class="mode-status" id="mode-status">Public view-only mode</div>
   <div class="admin-page-switch" id="admin-page-switch" aria-label="Admin pages">
     <button type="button" class="active" data-admin-page="scoring">Page 1 · Scoring</button>
@@ -2272,6 +2276,10 @@ const configured = FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.includes("P
 const statusEl = document.getElementById('cloud-status');
 function cloudStatus(msg, cls) {
   if (!statusEl) return;
+  if (/not configured|could not start|local phone save only|offline/i.test(msg || '')) msg = 'Sync Offline';
+  else if (/permission|config error|sync error/i.test(msg || '')) msg = 'Sync Issue';
+  else if (/waiting/i.test(msg || '')) msg = 'Sync Online';
+  else if (/connected|saved|live/i.test(msg || '')) msg = 'Sync Online';
   statusEl.textContent = msg;
   statusEl.className = 'cloud-status ' + (cls || '');
 }
