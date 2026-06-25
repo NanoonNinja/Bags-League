@@ -216,6 +216,10 @@ body{background:linear-gradient(180deg,#eaf2fb 0%,#f7f9fc 100%);color:var(--ink)
 .nvbtn.active{background:var(--navy);color:white;border-color:var(--navy)}
 select,input[type=text],input[type=number],textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.04);outline:none}
 select{font-size:14px;padding:9px 34px 9px 12px;margin-bottom:8px} input[type=text],input[type=number]{font-size:14px;padding:10px 12px;margin-bottom:8px}.admin-panel textarea{min-height:84px}
+select:not(#team-page-select){min-height:44px;border:2px solid #bfdbfe;border-radius:14px;background-color:#eff6ff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Cpath d='M2 2l6 6 6-6' stroke='%23ffffff' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),linear-gradient(135deg,#1F3864 0%,#2563eb 56%,#7c3aed 100%);background-repeat:no-repeat,no-repeat;background-position:right 15px center,center;background-size:16px 10px,100% 100%;color:#fff;font-weight:900;box-shadow:0 5px 14px rgba(37,99,235,.22)}
+select:not(#team-page-select):focus{border-color:#fbbf24;outline:3px solid rgba(251,191,36,.26);outline-offset:1px}
+select:not(#team-page-select) option{background:#fff;color:#172033;font-weight:800}
+.admin-panel select:not(#team-page-select),.forfeit-control select:not(#team-page-select),.makeup-date-control select:not(#team-page-select){min-height:40px;border-color:#d8b4fe;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10' viewBox='0 0 16 10'%3E%3Cpath d='M2 2l6 6 6-6' stroke='%23ffffff' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),linear-gradient(135deg,#0f766e 0%,#2563eb 52%,#7c3aed 100%);box-shadow:0 4px 12px rgba(15,118,110,.18)}
 .card,.match-card,.share-box,.bagger-form-box,.bagger-entry,.admin-panel{border-radius:16px;box-shadow:0 4px 14px rgba(15,23,42,.08);border:1px solid rgba(219,227,239,.85)}
 .card-hdr{padding:10px 12px}.card-hdr.navy{background:linear-gradient(135deg,#183153,#2563eb)}.card-hdr.purple{background:linear-gradient(135deg,#6d28d9,#9333ea)}
 th{padding:7px 9px;font-size:10px}td{padding:7px 9px;font-size:12px}.pill{border-radius:999px;padding:2px 7px;font-size:11px}
@@ -646,6 +650,7 @@ function getMatchups(week0, slot) {
 // ── State ─────────────────────────────────────────────────────────────────────
 var results = {}, baggers = {};
 var archives = {};
+var internalBackups = {};
 var viewingArchive = '';
 var playoffState = { locked:false, generated:false, topTitle:'Tier 1 Championship', bottomTitle:'Tier 2 Championship', top:null, bottom:null, final:{teamA:'',teamB:'',winner:''}, bracketLayout:null };
 var REGULAR_SEASON_END = '2026-08-06';
@@ -1363,12 +1368,30 @@ function applyLeagueSettings(settings) {
   fillAdminSeasonForm();
   updateWeekStartControl();
 }
+function isInternalBackupArchive(key, archive) {
+  archive = archive || {};
+  if (archive.note && /automatic backup|pre-live-update/i.test(archive.note)) return true;
+  if (/^pre-live-update backup/i.test(key || '')) return true;
+  return false;
+}
+function moveInternalBackupsOutOfArchives() {
+  archives = archives || {};
+  internalBackups = internalBackups || {};
+  var moved = false;
+  Object.keys(archives).forEach(function(key){
+    if (!isInternalBackupArchive(key, archives[key])) return;
+    internalBackups[key] = archives[key];
+    delete archives[key];
+    moved = true;
+  });
+  return moved;
+}
 function applyWeek3MakeupRotation(){
   if (leagueSettings.week3MakeupRotationApplied) return false;
   var backupName = 'Pre-Live-Update Backup 2026-06-23';
-  archives = archives || {};
-  if (!archives[backupName]) {
-    archives[backupName] = {
+  internalBackups = internalBackups || {};
+  if (!internalBackups[backupName]) {
+    internalBackups[backupName] = {
       settings: JSON.parse(JSON.stringify(leagueSettings || {})),
       results: JSON.parse(JSON.stringify(results || {})),
       baggers: JSON.parse(JSON.stringify(baggers || {})),
@@ -1725,7 +1748,9 @@ function fillAdminSeasonForm() {
 function populateSeasonViewSelector() {
   var sel = document.getElementById('season-view-sel');
   if (!sel) return;
-  var keys = Object.keys(archives || {}).sort().reverse();
+  var keys = Object.keys(archives || {}).filter(function(k){
+    return !isInternalBackupArchive(k, (archives || {})[k]);
+  }).sort().reverse();
   if (!keys.length) { sel.style.display = 'none'; return; }
   sel.style.display = 'block';
   var curName = leagueSettings.leagueName || leagueSettings.seasonName || 'Current Season';
@@ -2336,6 +2361,7 @@ async function startCloudSync() {
             results: results || {},
             baggers: baggers || {},
             archives: archives || {},
+            internalBackups: internalBackups || {},
             playoffs: playoffState || {},
             updatedAt: serverTimestamp()
           }, { merge: true });
@@ -2363,6 +2389,8 @@ async function startCloudSync() {
       pendingWeekMigration = needsTenWeekMigration || needsMakeupRotation;
       applyingRemote = true;
       archives = data.archives || {};
+      internalBackups = data.internalBackups || {};
+      const movedInternalBackups = moveInternalBackupsOutOfArchives();
       playoffState = data.playoffs || playoffState || { locked:false, generated:false, topTitle:'Tier 1 Championship', bottomTitle:'Tier 2 Championship', top:null, bottom:null, final:{teamA:'',teamB:'',winner:''} };
       applyLeagueSettings(data.settings || leagueSettings);
       if (!viewingArchive) {
@@ -2378,7 +2406,7 @@ async function startCloudSync() {
       renderEverything();
       applyingRemote = false;
       cloudStatus('Cloud sync live', 'ok');
-      if ((needsTenWeekMigration || makeupRotationApplied) && ADMIN_MODE) {
+      if ((needsTenWeekMigration || makeupRotationApplied || movedInternalBackups) && ADMIN_MODE) {
         pendingWeekMigration = false;
         setTimeout(function(){ window.save(); }, 50);
       }
