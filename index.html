@@ -884,6 +884,8 @@ function renderMatchups() {
 
     var aCls = 'team-side' + (mw === 'a' ? ' winner' : mw === 'b' ? ' loser' : '');
     var bCls = 'team-side' + (mw === 'b' ? ' winner' : mw === 'a' ? ' loser' : '');
+    var aDisplay = teamNameForSchedule(mu.a, curWeek, curSlot + 1);
+    var bDisplay = teamNameForSchedule(mu.b, curWeek, curSlot + 1);
 
     html += '<div class="match-card">';
     html += '<div class="mc-hdr ' + hcls + '"><span>' + mu.board + '</span><span>' + stlbl + '</span></div>';
@@ -892,14 +894,14 @@ function renderMatchups() {
     html += '<div class="match-teams">';
     html += '<div class="' + aCls + '">';
     html += '<div class="tnum">TEAM ' + tnum(mu.a) + '</div>';
-    html += '<div class="tname">' + mu.a + '</div>';
+    html += '<div class="tname">' + aDisplay + '</div>';
     html += '<div class="tscore">' + aW + '</div>';
     html += '</div>';
     html += '<div style="width:2px;background:#E0E0E0"></div>';
     html += '<div class="' + bCls + '">';
     html += '<div class="tnum">TEAM ' + tnum(mu.b) + '</div>';
     html += '<div class="tscore">' + bW + '</div>';
-    html += '<div class="tname">' + mu.b + '</div>';
+    html += '<div class="tname">' + bDisplay + '</div>';
     html += '</div>';
     html += '</div>';
     // Game buttons
@@ -912,7 +914,7 @@ function renderMatchups() {
     if (forfeitingTeam) {
       html += '<div class="forfeit-note">🚫 ' + forfeitingTeam.team + ' forfeited · Opponent awarded 3-0</div>';
     } else if (m.swept) {
-      html += '<div class="sweep-note">&#127942; ' + (m.g1 === 'a' ? mu.a : mu.b) + ' won Games 1 &amp; 2 &mdash; Game 3 auto-awarded!</div>';
+      html += '<div class="sweep-note">&#127942; ' + (m.g1 === 'a' ? aDisplay : bDisplay) + ' won Games 1 &amp; 2 &mdash; Game 3 auto-awarded!</div>';
     }
     html += '</div></div>';
   }
@@ -1894,7 +1896,7 @@ function addScoreSubRecord(){
   leagueSettings.subs = leagueSettings.subs || [];
   leagueSettings.subs.push({week:curWeek,team:team,round:round ? Number(round) : '',name:name,forPlayer:forPlayer});
   var input = document.getElementById('score-sub-player-name'); if (input) input.value = '';
-  renderSubAdmin(); renderScoreSubEntry(); renderTeamPage(); save();
+  renderSubAdmin(); renderScoreSubEntry(); renderTeamPage(); renderMatchups(); save();
 }
 function addSubRecord(){
   if (!ADMIN_MODE) return;
@@ -1906,14 +1908,14 @@ function addSubRecord(){
   leagueSettings.subs = leagueSettings.subs || [];
   leagueSettings.subs.push({week:week,team:team,round:round ? Number(round) : '',name:name,forPlayer:''});
   var input = document.getElementById('sub-player-name'); if (input) input.value = '';
-  renderSubAdmin(); renderScoreSubEntry(); renderTeamPage(); save();
+  renderSubAdmin(); renderScoreSubEntry(); renderTeamPage(); renderMatchups(); save();
 }
 function removeSubRecord(index){
   if (!ADMIN_MODE) return;
   leagueSettings.subs = leagueSettings.subs || [];
   if (index < 0 || index >= leagueSettings.subs.length) return;
   leagueSettings.subs.splice(index,1);
-  renderSubAdmin(); renderScoreSubEntry(); renderTeamPage(); save();
+  renderSubAdmin(); renderScoreSubEntry(); renderTeamPage(); renderMatchups(); save();
 }
 function removeHolidayDayOff(date){
   if (!ADMIN_MODE) return;
