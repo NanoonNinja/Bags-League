@@ -887,8 +887,6 @@ function renderMatchups() {
     var bCls = 'team-side' + (mw === 'b' ? ' winner' : mw === 'a' ? ' loser' : '');
     var aDisplay = teamNameForScheduleHtml(mu.a, curWeek, curSlot + 1);
     var bDisplay = teamNameForScheduleHtml(mu.b, curWeek, curSlot + 1);
-    var aSubNote = subNotesForTeamHtml(mu.a, curWeek, curSlot + 1);
-    var bSubNote = subNotesForTeamHtml(mu.b, curWeek, curSlot + 1);
 
     html += '<div class="match-card">';
     html += '<div class="mc-hdr ' + hcls + '"><span>' + mu.board + '</span><span>' + stlbl + '</span></div>';
@@ -897,14 +895,14 @@ function renderMatchups() {
     html += '<div class="match-teams">';
     html += '<div class="' + aCls + '">';
     html += '<div class="tnum">TEAM ' + tnum(mu.a) + '</div>';
-    html += '<div class="tname">' + aDisplay + aSubNote + '</div>';
+    html += '<div class="tname">' + aDisplay + '</div>';
     html += '<div class="tscore">' + aW + '</div>';
     html += '</div>';
     html += '<div style="width:2px;background:#E0E0E0"></div>';
     html += '<div class="' + bCls + '">';
     html += '<div class="tnum">TEAM ' + tnum(mu.b) + '</div>';
     html += '<div class="tscore">' + bW + '</div>';
-    html += '<div class="tname">' + bDisplay + bSubNote + '</div>';
+    html += '<div class="tname">' + bDisplay + '</div>';
     html += '</div>';
     html += '</div>';
     // Game buttons
